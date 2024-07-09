@@ -1,9 +1,5 @@
----
-layout: default
-title: Installing Stata Packages from the Pm-Suite
----
 
-# Installing Stata Packages from the Pm-Suite
+# Installing packages from the Pm-Suite
 
 This site contains a Stata package directory for the Pm-Suite by Joie Ensor
 
