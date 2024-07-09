@@ -8,3 +8,5 @@ Use `net from https://joieensor.github.io/pm-suite/` to see the available packag
 Use `net describe pmsampsize, from(https://joieensor.github.io/pm-suite/)` to see the details of the "pmsampsize" example package.
   
 Then use `net install pmsampsize` to install the first package. It contains one command called `pmsampsize`. 
+
+If you know which package you wish you install you can install directly using for example - `net install pmsampsize, from("https://joieensor.github.io/pm-suite")`
