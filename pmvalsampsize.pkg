@@ -1,0 +1,5 @@
+d pmvalsampsize | Calculates the minimum sample size required when validating a multivariable prediction model
+d Distribution-date: 2023-11-10
+d Joie Ensor (j.ensor@bham.ac.uk)
+f pmvalsampsize/pmvalsampsize.ado
+f pmvalsampsize/pmvalsampsize.sthlp
