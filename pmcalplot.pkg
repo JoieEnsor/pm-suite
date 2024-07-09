@@ -1,0 +1,5 @@
+d pmcalplot | Calibration plot 'of' prediction model performance
+d Distribution-date: 2024-03-06
+d Joie Ensor (j.ensor@bham.ac.uk)
+f pmcalplot/pmcalplot.ado
+f pmcalplot/pmcalplot.sthlp
