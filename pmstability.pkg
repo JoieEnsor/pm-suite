@@ -1,0 +1,5 @@
+d pmstabilityss | Calculates the minimum sample size required for developing a CPM based on uncertainty intervals for probabilities
+d Distribution-date: 2024-07-09
+d Joie Ensor (j.ensor@bham.ac.uk)
+f pmstabilityss/pmstabilityss.ado
+f pmstabilityss/pmstabilityss.sthlp
