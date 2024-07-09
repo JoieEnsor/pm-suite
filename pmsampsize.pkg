@@ -1,0 +1,5 @@
+d pmsampsize | Calculates the minimum sample size required when developing a multivariable prediction model
+d Distribution-date: 2023-12-04
+d Joie Ensor (j.ensor@bham.ac.uk)
+f pmsampsize/pmsampsize.ado
+f pmsampsize/pmsampsize.sthlp
