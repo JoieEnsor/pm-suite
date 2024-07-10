@@ -4,3 +4,4 @@ p pmsampsize Calculates the minimum sample size required for developing a multiv
 p pmvalsampsize Calculates the minimum sample size required for external validation of a multivariable prediction model
 p pmcalplot Calibration plot of prediction model performance
 p pmstability Calculates minimum sample size for developing a CPM based on uncertainty intervals for probabilities
+p pmcstat Calculates the C-statistic for a prediction model
