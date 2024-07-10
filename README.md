@@ -1,7 +1,7 @@
 
-# Installing packages from the Pm-Suite
+# Installing packages from the pm-suite
 
-This site contains a Stata package directory for the Pm-Suite by Joie Ensor
+This site contains a Stata package directory for the pm-suite by Joie Ensor
 
 Use `net from https://joieensor.github.io/pm-suite/` to see the available packages.
 
