@@ -1,0 +1,4 @@
+d pmcstat | Calculates the C-statistic for a prediction model
+d Distribution-date: 2023-08-16
+d Joie Ensor (j.ensor@bham.ac.uk)
+f pmcstat/pmcstat.ado
