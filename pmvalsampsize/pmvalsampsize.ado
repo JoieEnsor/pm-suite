@@ -48,9 +48,9 @@ syntax ,   TYPE(string) ///
 			SEED(int 123456) MMOE(real 1.1) TRACE GRAPH CALCURves noPRINT ///
 			SENSitivity(real 0) SPECificity(real 0) THRESHold(real 0) ///
 			NBCIwidth(real 0.2) NBSEINCrement(real 0.0001) RECALLCIwidth(real 0.1) ///
-			 PRECISIONCIwidth(real 0.1) SENSCIwidth(real 0.1) ///
+			 PRECISIONCIwidth(real 0.1)  ///
 			 SPECCIwidth(real 0.1) ACCURACYCIwidth(real 0.1) ///
-			 FSCORECIwidth(real 0.1) VERBOSE]
+			 FSCORECIwidth(real 0.1) NPVCIwidth(real 0.1) VERBOSE]
 
 
 ***********************************************
@@ -90,7 +90,11 @@ if "`type'"=="b" {
 				cstatci(`cstatciwidth') simobs(`simobs') ///
 				sens(`sensitivity') spec(`specificity') thresh(`threshold') ///
 				nbciwidth(`nbciwidth') nbseincrement(`nbseincrement') ///
-				tol(`tolerance') inc(`increment') seed(`seed') lpnormal(`lpnormal') `graph_ind' `trace_ind' `verbose_ind'
+				tol(`tolerance') inc(`increment') seed(`seed') lpnormal(`lpnormal') ///
+				recallciwidth(`recallciwidth') precisionciwidth(`precisionciwidth') ///
+				specciwidth(`specciwidth') accuracyciwidth(`accuracyciwidth') ///
+				fscoreciwidth(`fscoreciwidth') npvciwidth(`npvciwidth') ///
+				`graph_ind' `trace_ind' `verbose_ind'
 		
 	}
 	else if "`lpskewednormal'"!="" {
@@ -106,7 +110,11 @@ if "`type'"=="b" {
 				cstatci(`cstatciwidth') simobs(`simobs') ///
 				sens(`sensitivity') spec(`specificity') thresh(`threshold') ///
 				nbciwidth(`nbciwidth') nbseincrement(`nbseincrement') ///
-				tol(`tolerance') inc(`increment') seed(`seed') lpskewednormal(`lpskewednormal') `graph_ind' `trace_ind' `verbose_ind'
+				tol(`tolerance') inc(`increment') seed(`seed') lpskewednormal(`lpskewednormal') ///
+				recallciwidth(`recallciwidth') precisionciwidth(`precisionciwidth') ///
+				specciwidth(`specciwidth') accuracyciwidth(`accuracyciwidth') ///
+				fscoreciwidth(`fscoreciwidth') npvciwidth(`npvciwidth') ///
+				`graph_ind' `trace_ind' `verbose_ind'
 		
 	}
 	else if "`lpbeta'"!="" {
@@ -122,7 +130,11 @@ if "`type'"=="b" {
 				cstatci(`cstatciwidth') simobs(`simobs') ///
 				sens(`sensitivity') spec(`specificity') thresh(`threshold') ///
 				nbciwidth(`nbciwidth') nbseincrement(`nbseincrement') ///
-				tol(`tolerance') inc(`increment') seed(`seed') lpbeta(`lpbeta') `graph_ind' `trace_ind' `verbose_ind'
+				tol(`tolerance') inc(`increment') seed(`seed') lpbeta(`lpbeta') ///
+				recallciwidth(`recallciwidth') precisionciwidth(`precisionciwidth') ///
+				specciwidth(`specciwidth') accuracyciwidth(`accuracyciwidth') ///
+				fscoreciwidth(`fscoreciwidth') npvciwidth(`npvciwidth') ///
+				`graph_ind' `trace_ind' `verbose_ind'
 		
 	}
 	else if "`lpnormal'"=="" & "`lpskewednormal'"=="" & "`lpbeta'"=="" & "`lpcstat'"=="" {
@@ -138,7 +150,11 @@ if "`type'"=="b" {
 				cstatci(`cstatciwidth') simobs(`simobs') ///
 				sens(`sensitivity') spec(`specificity') thresh(`threshold') ///
 				nbciwidth(`nbciwidth') nbseincrement(`nbseincrement') ///
-				tol(`tolerance') inc(`increment') seed(`seed') lpcstat(`lpcstat') `graph_ind' `trace_ind' `verbose_ind'
+				tol(`tolerance') inc(`increment') seed(`seed') lpcstat(`lpcstat') ///
+				recallciwidth(`recallciwidth') precisionciwidth(`precisionciwidth') ///
+				specciwidth(`specciwidth') accuracyciwidth(`accuracyciwidth') ///
+				fscoreciwidth(`fscoreciwidth') npvciwidth(`npvciwidth') ///
+				`graph_ind' `trace_ind' `verbose_ind'
 				
 		ret sca non_event_mean = r(non_event_mean)
 		ret sca event_mean = r(event_mean)
@@ -238,7 +254,7 @@ syntax , PREValence(real) CSTATistic(real) ///
 			 NBSEINCrement(real 0.0001) RECALLCIwidth(real 0.1) ///
 			 PRECISIONCIwidth(real 0.1) SENSCIwidth(real 0.1) ///
 			 SPECCIwidth(real 0.1) ACCURACYCIwidth(real 0.1) ///
-			 FSCORECIwidth(real 0.1)  VERBOSE ///
+			 FSCORECIwidth(real 0.1) NPVCIwidth(real 0.1) VERBOSE ///
 			 ] 
 
 // CHECK INPUTS
@@ -684,6 +700,11 @@ else if `threshold'!=0 {
 
 	local n9 = ceil((2*`precision'^2*`recall'^2*(`cov_1'+`cov_2'))/((((`se_f1')^2*(`precision'+`recall')^4)/4)-(`precision'^4*`se_recall'^2)-(`recall'^4*`se_precision'^2)))
 
+	// NPV
+	local npv=`TN'/(`TN'+`FN')
+	local se_npv = round((`npvciwidth'/(2*1.96)), 0.0001)
+	local n10=ceil((`npv'*(1-`npv'))/(`se_npv'^2*((`specificity'*(1-`prevalence'))+(`prevalence'*(1-`recall')))))
+	
 	
 	****
 	// flag for printing 
@@ -791,8 +812,26 @@ matrix Results[`i',1] = Samp_size[3]
 matrix Results[`i',2] = Perf[3]
 matrix Results[`i',3] = SE[3]
 matrix Results[`i',4] = CI[3]
+
+mat final = J(1,4,.)
+	matrix final[1,1] = Samp_size[3]
+	matrix final[1,2] = Perf[3]
+	matrix final[1,3] = SE[3]
+	matrix final[1,4] = CI[3]
+	mat colnames final = "Samp_size" "Perf" "SE" "CI width" 
+		mat rownames final = "Final SS"
+		
 restore
 
+
+if "`verbose'"=="" {
+	matlist final,  aligncolnames(r) twidth(15) lines(rowtotal) title("Minimum SS recommended to achieve target precision for core metrics")
+	
+	local di_E_final = ceil(`E_final')
+	di _n "Minimum sample size required for model validation based on user inputs = `nfinal',"
+	di "with `di_E_final' events (assuming an outcome prevalence = `prevalence')"
+}
+else {
 matlist Results,  aligncolnames(r) twidth(30) lines(rowtotal)
 
 return mat results = Results
@@ -800,12 +839,13 @@ return mat results = Results
 local di_E_final = ceil(`E_final')
 di _n "Minimum sample size required for model validation based on user inputs = `nfinal',"
 di "with `di_E_final' events (assuming an outcome prevalence = `prevalence')"
+}
 
 }
 else {
 	
 		// MINIMUM N 
-	local nfinal = max(`n1',`n2',`n3',`n4')
+	local nfinal = max(`n1',`n2',`n3',`n4',`n5',`n6',`n7',`n8',`n9',`n10')
 	local di_perf_1 : di %4.3f `oe'
 	local di_perf_2 : di %4.3f `cslope'
 	local di_perf_3 : di %4.3f `cstatistic'
@@ -815,7 +855,8 @@ else {
 	local di_perf_7 : di %4.3f `recall'
 	local di_perf_8 : di %4.3f `precision'
 	local di_perf_9 : di %4.3f `f1score'
-
+	local di_perf_10 : di %4.3f `npv'
+	
 	local di_se_1 : di %4.3f `se_oe'
 	local di_se_2 : di %4.3f `se_cslope'
 	local di_se_3 : di %4.3f `se_cstat'
@@ -825,6 +866,7 @@ else {
 	local di_se_7 : di %4.3f `se_recall'
 	local di_se_8 : di %4.3f `se_precision'
 	local di_se_9 : di %4.3f `se_f1'
+	local di_se_10 : di %4.3f `se_npv'
 
 	local di_ci_1 : di %4.3f  `width_oe' //`oeciwidth'
 	local di_ci_2 : di %4.3f `csciwidth'
@@ -835,6 +877,7 @@ else {
 	local di_ci_7 : di %4.3f `recallciwidth'
 	local di_ci_8 : di %4.3f `precisionciwidth'
 	local di_ci_9 : di %4.3f `fscoreciwidth'
+	local di_ci_10 : di %4.3f `npvciwidth'
 
 	local di_lb_1 : di %4.3f `lb_oe'
 	//local di_lb_2 : di %4.3f `lb_cslope'
@@ -850,7 +893,7 @@ else {
 	return scalar sample_size = `nfinal'
 	return scalar events = `E_final'
 	return scalar prevalence = `prevalence'
-	local retlist oe se_oe lb_oe ub_oe width_oe cslope se_cslope csciwidth cstatistic se_cstat cstatciwidth sensitivity specificity threshold standardised_nb nb accuracy se_accuracy accuracyciwidth specificity se_spec specciwidth recall se_recall recallciwidth precision se_precision precisionciwidth f1score se_f1 fscoreciwidth
+	local retlist oe se_oe lb_oe ub_oe width_oe cslope se_cslope csciwidth cstatistic se_cstat cstatciwidth sensitivity specificity threshold standardised_nb nb accuracy se_accuracy accuracyciwidth specificity se_spec specciwidth recall se_recall recallciwidth precision se_precision precisionciwidth f1score se_f1 fscoreciwidth npv se_npv npvciwidth
 	foreach s of local retlist {
 	ret sca `s' = ``s''
 	}
@@ -894,8 +937,8 @@ else {
 	
 	
 	// N req for user precision on threshold-based metrics
-	local res 5 6 7 8 9  
-	matrix AddResults = J(5,4,.)
+	local res 5 6 7 8 9 10
+	matrix AddResults = J(6,4,.)
 	local i=0
 	foreach r of local res {
 		local ++i
@@ -905,7 +948,7 @@ else {
 		matrix AddResults[`i',4] = `di_ci_`r''
 		}
 		mat colnames AddResults = "Samp_size" "Perf" "SE" "CI width" 
-		mat rownames AddResults = "Accuracy" "Specificity" "Recall"  "Precision" "F1-score" 
+		mat rownames AddResults = "Accuracy" "Specificity" "Recall"  "Precision" "F1-score" "NPV"
 		
 	
 
@@ -948,6 +991,12 @@ else {
 	local f1_uci=`f1score'+1.96*`se_f1_recn'
 	local fscoreciwidth_recn = `f1_uci'-`f1_lci'
 	
+	** NPV 
+	local se_npv_recn=sqrt((`npv'*(1-`npv'))/(`nfinal'*((`specificity'*(1-`prevalence'))+(`prevalence'*(1-`recall')))))
+	local npv_lci=`npv'-1.96*`se_npv_recn'
+	local npv_uci=`npv'+1.96*`se_npv_recn'
+	local npvciwidth_recn = `npv_uci'-`npv_lci'
+	
 	local di_perf_1 : di %4.3f `oe'
 	local di_perf_2 : di %4.3f `cslope'
 	local di_perf_3 : di %4.3f `cstatistic'
@@ -957,6 +1006,7 @@ else {
 	local di_perf_7 : di %4.3f `recall'
 	local di_perf_8 : di %4.3f `precision'
 	local di_perf_9 : di %4.3f `f1score'
+	local di_perf_10 : di %4.3f `npv'
 
 	local di_se_1 : di %4.3f `se_oe'
 	local di_se_2 : di %4.3f `se_cslope'
@@ -967,6 +1017,7 @@ else {
 	local di_se_7 : di %4.3f `se_recall_recn'
 	local di_se_8 : di %4.3f `se_precision_recn'
 	local di_se_9 : di %4.3f `se_f1_recn'
+	local di_se_10 : di %4.3f `se_npv_recn'
 
 	local di_ci_1 : di %4.3f  `width_oe' 
 	local di_ci_2 : di %4.3f `csciwidth'
@@ -977,6 +1028,7 @@ else {
 	local di_ci_7 : di %4.3f `recallciwidth_recn'
 	local di_ci_8 : di %4.3f `precisionciwidth_recn'
 	local di_ci_9 : di %4.3f `fscoreciwidth_recn'
+	local di_ci_10 : di %4.3f `npvciwidth_recn'
 
 	local di_lb_1 : di %4.3f `lb_oe'
 	//local di_lb_2 : di %4.3f `lb_cslope'
@@ -994,12 +1046,13 @@ else {
 	local di_ub_8 : di %4.3f `precision_uci'
 	local di_lb_9 : di %4.3f `f1_lci'
 	local di_ub_9 : di %4.3f `f1_uci'
-
+	local di_lb_10 : di %4.3f `npv_lci'
+	local di_ub_10 : di %4.3f `npv_uci'
 
 	// OUTPUT TABLE & ASSUMPTIONS
 	// precision of threshold-based metrics given recommended N 
-	local res 5 6 7 8 9  
-	matrix AddResults2 = J(5,6,.)
+	local res 5 6 7 8 9 10
+	matrix AddResults2 = J(6,6,.)
 	local i=0
 	foreach r of local res {
 		local ++i
@@ -1011,12 +1064,12 @@ else {
 		matrix AddResults2[`i',6] = `di_ub_`r''
 		}
 		mat colnames AddResults2 = "Samp_size" "Perf" "SE" "CI width" "LCI" "UCI"
-		mat rownames AddResults2 = "Accuracy" "Specificity" "Recall"  "Precision" "F1-score" 
+		mat rownames AddResults2 = "Accuracy" "Specificity" "Recall"  "Precision" "F1-score" "NPV"
 	
 	
 
 if "`verbose'"=="" {
-	matlist final,  aligncolnames(r) twidth(15) lines(rowtotal) title("Minimum SS recommended to achieve target precision for core metrics")
+	matlist final,  aligncolnames(r) twidth(15) format(%9.2gc) underscore lines(rowtotal) title("Minimum SS recommended to achieve target precision for core metrics")
 	
 	local di_E_final = ceil(`E_final')
 	di _n "Minimum sample size required for model validation based on user inputs = `nfinal',"
@@ -1026,7 +1079,7 @@ if "`verbose'"=="" {
 	
 
 if "`verbose'"!="" {
-	matlist Results,  aligncolnames(r) twidth(30) lines(rowtotal) rowtitle("Criteria") title("Minimum SS required to achieve target precision for core metrics")
+	matlist Results,  aligncolnames(r) twidth(30) format(%9.2gc) underscore lines(rowtotal) rowtitle("Criteria") title("Minimum SS required to achieve target precision for core metrics")
 
 	local di_E_final = ceil(`E_final')
 	di _n "Minimum sample size required for model validation based on user inputs = `nfinal',"
@@ -1034,9 +1087,9 @@ if "`verbose'"!="" {
 	
 	criteria_print, type(b) sens(`sensitivity') spec(`specificity') thresh(`threshold')
 	
-	matlist AddResults,  aligncolnames(r) twidth(15) rowtitle("Criteria") title("Minimum SS required to achieve target precision for additional metrics")
+	matlist AddResults,  aligncolnames(r) twidth(15) format(%9.2gc) underscore rowtitle("Criteria") title("Minimum SS required to achieve target precision for additional metrics")
 	
-	matlist AddResults2,  aligncolnames(r) twidth(15) rowtitle("Criteria") title("Precision achieved at recommended minimum SS")
+	matlist AddResults2,  aligncolnames(r) twidth(15) format(%9.2gc) underscore rowtitle("Criteria") title("Precision achieved at recommended minimum SS")
 }
 
 	return mat results = Results
@@ -1487,5 +1540,4 @@ local res cstat cord disc ties  obs
 		
 
 end
-
 
