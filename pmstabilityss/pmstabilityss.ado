@@ -81,9 +81,6 @@ if `cuts'!=`user_widths' {
 // check we only have continuous or binary variables
 
 
-// check subgroup var format 
-
-
 *******************************
 // create new frame summarising the user dataset for input into pmsim
 
@@ -109,8 +106,6 @@ foreach name in `varlist' {
 		qui su `name'
 		frame post `pmstabilityss_sumstats' ("`name'") (1) (r(mean)) (.) (.)
 		
-		
-// 			qui replace `name' = (`name' - r(mean))/r(sd)
 		
 	}
 	else { 
@@ -147,8 +142,6 @@ foreach name in `varlist' {
 	}
 	else { 
 		// continuous vars
-		
-		
 		qui su `name'
 		frame post `pmstabilityss_sumstats' ("`name'") (``token'') (.) (r(mean)) (r(sd))
 		
@@ -159,7 +152,7 @@ foreach name in `varlist' {
 
 
 frame change `pmstabilityss_sumstats'
-// frame rename `pmstabilityss_sumstats' test
+
 mkmat beta , mat(input_betas) rown(predictors)
 
 *******************************
@@ -515,27 +508,14 @@ local textpos = r(max)
 
 frame post pmstabilityss_threshold_stats (`num') (`threshold') (r(mean)) (r(min)) (r(p50)) (r(max)) 
 
-/*
-* summarise probs overall 
-qui summ prob_above_`num' if p_true < `threshold'
-qui summ prob_below_`num' if p_true >= `threshold'
-
-
-* calculate the proportion of people who have a CI that crosses a threshold 
-qui gen swap_`num' = 0
-qui replace swap_`num' = 1 if p_true >= `threshold' & lower_p_`num' < `threshold'
-qui replace swap_`num' = 1 if p_true < `threshold' & upper_p_`num' >= `threshold'
-qui su swap_`num', det
-*/
-
 // classification instability plot
-twoway (scatter prob_different_`num' p_true, sort `nodraw' jitter(0) msym(Oh) msize(tiny) plotr(lcol(black)) mcol(`color') legend(off) xtitle(True risk, size("`text_size'")) ytitle("Proportion of intervals" "with misclassification", size("`text_size'")) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) graphregion(col(white)) name(class_instability_`num', replace) text(`textpos' 1 "N = `num'", size("`text_size'") place(w) just(right))) //title("Mislassification instability plot for N = `num'", size(medsmall))) 
+twoway (scatter prob_different_`num' p_true, sort `nodraw' jitter(0) msym(Oh) msize(tiny) plotr(lcol(black)) mcol(`color') legend(off) xtitle(True risk, size("`text_size'")) ytitle("Proportion of intervals" "with misclassification", size("`text_size'")) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) graphregion(col(white)) name(class_instability_`num', replace) text(`textpos' 1 "N = `num'", size("`text_size'") place(w) just(right))) 
 
 local comp_class_plot_list = "`comp_class_plot_list' class_instability_`num'"
 }
 
 * plot CI for each individual versus their true risk (prediction instability plot)
-twoway (rspike lower_p_`num' upper_p_`num' p_true, `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "N = `num'", size("`text_size'") place(se) just(left))) (lowess lower_p_`num' p_true, sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess upper_p_`num' p_true, sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(instability_plot_`num', replace) //title("Prediction instability plot" "for N = `num'", size(medsmall)) 
+twoway (rspike lower_p_`num' upper_p_`num' p_true, `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "N = `num'", size("`text_size'") place(se) just(left))) (lowess lower_p_`num' p_true, sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess upper_p_`num' p_true, sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(instability_plot_`num', replace) 
 
 
 local comp_insta_plot_list = "`comp_insta_plot_list' instability_plot_`num'"
@@ -598,7 +578,7 @@ if !_rc {
 		frame post pmstabilityss_sub_stats (`s') (`num') (r(mean)) (r(min)) (r(p50)) (r(max))
 		
 		* plot CI for each individual versus their true risk (prediction instability plot)
-		twoway (rspike lower_p_`num' upper_p_`num' p_true if `subgroup'==`s', `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "N = `num'" "Subgroup = `s'", size("`text_size'") place(se) just(left))) (lowess lower_p_`num' p_true if `subgroup'==`s', sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess upper_p_`num' p_true if `subgroup'==`s', sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(inst_`num'_`s', replace) //title("Prediction instability plot" "for N = `num'", size(medsmall)) 
+		twoway (rspike lower_p_`num' upper_p_`num' p_true if `subgroup'==`s', `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "N = `num'" "Subgroup = `s'", size("`text_size'") place(se) just(left))) (lowess lower_p_`num' p_true if `subgroup'==`s', sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess upper_p_`num' p_true if `subgroup'==`s', sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(inst_`num'_`s', replace)  
 
 
 	local comp_sub_`s'_list = "`comp_sub_`s'_list' inst_`num'_`s'"
@@ -619,7 +599,7 @@ foreach num in `ss_tests' {
 		frame post pmstabilityss_sub_stats ("`s'") (`num') (r(mean)) (r(min)) (r(p50)) (r(max))
 		
 		* plot CI for each individual versus their true risk (prediction instability plot)
-		twoway (rspike lower_p_`num' upper_p_`num' p_true if `subgroup'=="`s'", `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "Subgroup = `s'" "N = `num'", size("`text_size'") place(se) just(left))) (lowess lower_p_`num' p_true if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess upper_p_`num' p_true if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(inst_`num'_`s', replace) //title("Prediction instability plot" "for N = `num'", size(medsmall)) 
+		twoway (rspike lower_p_`num' upper_p_`num' p_true if `subgroup'=="`s'", `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "Subgroup = `s'" "N = `num'", size("`text_size'") place(se) just(left))) (lowess lower_p_`num' p_true if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess upper_p_`num' p_true if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(inst_`num'_`s', replace)  
 
 
 	local comp_sub_`s'_list = "`comp_sub_`s'_list' inst_`num'_`s'"
@@ -646,7 +626,10 @@ if "`nocompare'"!="nocompare" {
 // saving frames
 if "`saving'"!="" {
 	foreach r in overall threshold cuts sub {
-		qui frames save pmstss_`r'_`saving', frames(pmstabilityss_`r'_stats) replace
+		qui cap frame change pmstabilityss_`r'_stats
+		if !_rc {
+			qui save pmstss_`r'_`saving', replace
+		}
 	}
 	
 }
