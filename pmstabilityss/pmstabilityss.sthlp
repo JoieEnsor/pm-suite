@@ -68,8 +68,7 @@
 {title:Description}
 
 {pstd}{cmd: pmstabilityss} computes the minimum sample size required for the development of a new clinical prediction model targeting precise individual risk estimates as proposed by Riley et al. 2024.
-{cmd: pmstabilityss} can be used to calculate the minimum sample size for the development of models with continuous, binary or survival (time-to-event) outcomes. 
-Riley et al. lay out a series of criteria the sample size should meet. These aim to minimise the overfitting and to ensure precise estimation of key parameters in the prediction model. 
+{cmd: pmstabilityss} can be used to calculate the minimum sample size for the development of models with a binary outcome.  
 
 {marker options}{...}
 
