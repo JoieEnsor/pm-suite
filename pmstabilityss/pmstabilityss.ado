@@ -639,7 +639,9 @@ if "`saving'"!="" {
 ***************
 }
 
-qui cap drop lp intercept unit_v* p_true var_ind* lower_logitp*  upper_logitp* lower_p* upper_p*  width* cat_code* avg_p* p_round* var_logit_p* ss_target_var* width*
+qui cap drop lp intercept unit_v* p_true var_ind* lower_logitp*  upper_logitp* lower_p* upper_p*  width* 
+qui cap drop z_* prob_above_* prob_below_* prob_different_*
+qui cap drop cat_code* avg_p* p_round* var_logit_p* ss_target_var* width*
 
 end
 
