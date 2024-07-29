@@ -101,14 +101,14 @@ Note we have set the expected relative effect of each predictor to the value see
 Let us compare this to what we would expect when using the recommended sample size using {cmd:pmsampsize}. 
 To do this we can use the {opt pmss} option as below. 
 {p_end}
-{phang2}{cmd:. }{stata pmstabilityss age lwt smoke ptl ht ui ftv, prev(.3122) cstat(.7382) beta(-.04328385  -.01433844    .5538123   .59443784   1.8720949   .73935229    .0235853) pmss}
+{phang2}{cmd:. }{stata pmstabilityss age lwt smoke ptl ht ui ftv, prev(.3122) cstat(.7382) beta(-.04328385  -.01433844    .5538123   .59443784   1.8720949   .73935229    .0235853) pmss nodraw}
 {p_end}
 
 {pstd}While uncertainty in individual risk estimates is reduced somewhat by using the higher N recommended by {cmd:pmsampsize} (N=388) there is still large uncertainty, 
 particularly for those with higher outcome probabilities.  
 We can input an N that we believe it is feasible to obtain from our new study using the {opt n()} option. 
 {p_end}
-{phang2}{cmd:. }{stata pmstabilityss age lwt smoke ptl ht ui ftv, prev(.3122) cstat(.7382) beta(-.04328385  -.01433844    .5538123   .59443784   1.8720949   .73935229    .0235853) pmss n(1000)}
+{phang2}{cmd:. }{stata pmstabilityss age lwt smoke ptl ht ui ftv, prev(.3122) cstat(.7382) beta(-.04328385  -.01433844    .5538123   .59443784   1.8720949   .73935229    .0235853) pmss n(1000) nodraw}
 {p_end}
 
 {pstd}At N=1000 there is much lower uncertainty in individual risk estimates with a median interval width of 0.08.  
@@ -117,7 +117,7 @@ To do this we must specify two options, first {opt pcutpoints()} and second {opt
 The following command specifies a target interval width of 0.1 for individuals with probabilities less than 0.3, 
 and a target width of 0.2 for those with probabilities above 0.3. 
 {p_end}
-{phang2}{cmd:. }{stata pmstabilityss age lwt smoke ptl ht ui ftv, prev(.3122) cstat(.7382) beta(-.04328385  -.01433844    .5538123   .59443784   1.8720949   .73935229    .0235853) pmss pcut(0.3 1) pci(0.1 0.2)}
+{phang2}{cmd:. }{stata pmstabilityss age lwt smoke ptl ht ui ftv, prev(.3122) cstat(.7382) beta(-.04328385  -.01433844    .5538123   .59443784   1.8720949   .73935229    .0235853) pmss pcut(0.3 1) pci(0.1 0.2) nodraw}
 {p_end}
 
 {pstd}Required sample size is significantly increased to achieve our target, but uncertainty is also dramatically reduced inline with our target.
