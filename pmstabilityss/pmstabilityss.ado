@@ -1,4 +1,5 @@
 
+
 program define pmstabilityss, rclass
 
 version 16
@@ -226,13 +227,13 @@ tempvar pi
 *************************************
 // create LP using bisection alpha/scalar
 
-tempvar lp
+tempvar lp_var
 
-qui gen lp = `intercept' + `scalar'*(`pi')
+qui gen `lp_var' = `intercept' + `scalar'*(`pi')
 
 } // end of loop for if user has not specified LP directly
 else {
-	qui gen lp = `lp'
+	qui gen `lp_var' = `lp'
 }
 
 ********************************
@@ -243,10 +244,9 @@ qui gen `id' = _n
 local elements = `vars'+1
 
 // create proxy variable for intercept 
-local varname1 = "intercept"
+local varname1 = "pmsss_intercept"
 
-tempvar intercept
-qui gen intercept = 1
+qui gen pmsss_intercept = 1
 
 
 // set up empty vector to fill
@@ -259,7 +259,7 @@ local row_iter = 0
 forvalues col=1/`elements' {
 	forvalues row=`row_start'/`elements' {
 		local row_iter = `row_iter'+1
-		qui gen M_`row'`col' = (`varname`row'')*(`varname`col'')*(exp(lp)/((1+exp(lp))^2))
+		qui gen M_`row'`col' = (`varname`row'')*(`varname`col'')*(exp(`lp_var')/((1+exp(`lp_var'))^2))
 		qui su M_`row'`col'
 		matrix stack[`row_iter',1] = r(mean)
 		qui drop M_`row'`col'
@@ -274,14 +274,14 @@ mat invI = inv(I)
 
 // Calculate individuals unit variance
 
-local mata_var_list "intercept `varlist'"
+local mata_var_list "pmsss_intercept `varlist'"
 mata: D = st_data(.,("`mata_var_list'"))
 
 mata: invIm = st_matrix("invI")
 
 mata: unit_v = J(rows(D),1,.)
 
-qui su intercept
+qui su pmsss_intercept
 forvalues i = 1/`r(N)' {
 	mata: unit_v[`i',1] = D[`i',.]*invIm*D[`i',.]'
 }
@@ -290,13 +290,14 @@ mata: st_matrix("unit_v", unit_v)
 
 svmat unit_v
 
-
+mat drop stack 
 ********************************
 
 di as txt _n "********************************************************"
 *********************************
 // gen predicted probabilities
-qui gen p_true = invlogit(lp)
+tempvar p_true
+qui gen `p_true' = invlogit(`lp_var')
 
 local cur_data_n = _N
 di as txt _n "Fixed SS of input dataset = `cur_data_n'" _n
@@ -324,17 +325,22 @@ foreach i in `pciwidth' {
 	
 mat colnames widths = "categories" "width" "cat_code" "avg_p"
 
-qui gen width = .
-qui gen cat_code = .
+tempvar width
+tempvar cat_code
+
+qui gen `width' = .
+qui gen `cat_code' = .
 forvalues i = 1/`cuts' {
-	qui replace width = widths[`i',2] if p_true<=widths[`i',1] & width==.
-	qui replace cat_code = widths[`i',3] if p_true<=widths[`i',1] & cat_code==.
+	qui replace `width' = widths[`i',2] if `p_true'<=widths[`i',1] & `width'==.
+	qui replace `cat_code' = widths[`i',3] if `p_true'<=widths[`i',1] & `cat_code'==.
 }
 
-qui gen avg_p = .
+tempvar avg_p
+
+qui gen `avg_p' = .
 forvalues i = 1/`cuts' {
-	qui su p_true if cat_code==`i' , det
-	qui replace avg_p = `r(p50)' if cat_code==`i'
+	qui su `p_true' if `cat_code'==`i' , det
+	qui replace `avg_p' = `r(p50)' if `cat_code'==`i'
 	mat widths[`i',4] = `r(p50)'
 }
 
@@ -346,10 +352,13 @@ mat colnames pvars = "pcode" "pcat" "width" "logit_p_var"
 
 mata: st_matrix("widths_desc",sort(st_matrix("widths"),-1))
 
-qui gen double p_round = round(p_true, 0.01)
-qui replace p_round = .01 if p_round==0
-qui replace p_round = .99 if p_round==1
-qui gen var_logit_p = .
+tempvar p_round
+tempvar var_logit_p 
+
+qui gen double `p_round' = round(`p_true', 0.01)
+qui replace `p_round' = .01 if `p_round'==0
+qui replace `p_round' = .99 if `p_round'==1
+qui gen `var_logit_p' = .
 
 local j = 0
 forvalues i = 0.01 (0.01) 1.01 {
@@ -366,25 +375,28 @@ forvalues i = 0.01 (0.01) 1.01 {
 
 	// identify appropriate target var(logit(p)) given pciwidth
 	 local width_p = 0 
-	 local var_logit_p = 0
+	 local var_logit_p_loc = 0
 	 
 	 
 	 	while `width_p' < pvars[`j',3] {
-			local var_logit_p = `var_logit_p'+`logitpvarincrement'
-			local ub_p = invlogit(((logit(pvars[`j',2]) + (1.96*sqrt(`var_logit_p')))))
-			local lb_p = invlogit(((logit(pvars[`j',2]) - (1.96*sqrt(`var_logit_p')))))
+			local var_logit_p_loc = `var_logit_p_loc'+`logitpvarincrement'
+			local ub_p = invlogit(((logit(pvars[`j',2]) + (1.96*sqrt(`var_logit_p_loc')))))
+			local lb_p = invlogit(((logit(pvars[`j',2]) - (1.96*sqrt(`var_logit_p_loc')))))
 			local width_p = `ub_p'-`lb_p'
 		
 	 }
-	 mat pvars[`j',4] = `var_logit_p' 
-	 qui replace var_logit_p = `var_logit_p' if p_round==round(`i',0.01)
+	 mat pvars[`j',4] = `var_logit_p_loc' 
+	 qui replace `var_logit_p' = `var_logit_p_loc' if `p_round'==round(`i',0.01)
 }
 
 
 ********************************
 // SS required to meet desired precision
-qui gen ss_target_var = ((1/var_logit_p)*(unit_v))
-qui su ss_target_var
+
+tempvar ss_target_var
+
+qui gen `ss_target_var' = ((1/`var_logit_p')*(unit_v1))
+qui su `ss_target_var'
 local target_var_min_N = ceil(r(max))
 
 di as txt "Minimum SS required to meet target UI widths = `target_var_min_N'" _n
@@ -463,32 +475,40 @@ local i = 0
 foreach num in `ss_tests' {
 		local i = `i'+1
 		
-qui gen var_ind_`num' = (1/`num')*unit_v
+tempvar var_ind_`num' 
+tempvar lower_logitp_`num'
+tempvar upper_logitp_`num'
+tempvar lower_p_`num'
+tempvar upper_p_`num'
+tempvar width_`num'
+
+qui gen `var_ind_`num'' = (1/`num')*unit_v1
 
 * convert to Ci on logit then p scales
-qui gen lower_logitp_`num' = lp - (1.96 * sqrt(var_ind_`num'))
-qui gen upper_logitp_`num' = lp + (1.96 * sqrt(var_ind_`num'))
+qui gen `lower_logitp_`num'' = `lp_var' - (1.96 * sqrt(`var_ind_`num''))
+qui gen `upper_logitp_`num'' = `lp_var' + (1.96 * sqrt(`var_ind_`num''))
 
-qui gen lower_p_`num' = invlogit(lower_logitp_`num')
-qui gen upper_p_`num' = invlogit(upper_logitp_`num')
+qui gen `lower_p_`num'' = invlogit(`lower_logitp_`num'')
+qui gen `upper_p_`num'' = invlogit(`upper_logitp_`num'')
 
-qui gen width_`num' = upper_p_`num' - lower_p_`num'
+qui gen `width_`num'' = `upper_p_`num'' - `lower_p_`num''
 * summarise widths overall 
-qui summ width_`num', det
+qui summ `width_`num'', det
 
 frame post pmstabilityss_overall_stats (`num') (r(mean)) (r(min)) (r(p50)) (r(max)) 
 
 if `cuts'!=0 {
-	
-qui gen width_good_`num' = 1
-qui replace width_good_`num' = 0 if width_`num' > width
+
+tempvar width_good_`num'
+qui gen `width_good_`num'' = 1
+qui replace `width_good_`num'' = 0 if `width_`num'' > `width'
 
 * summarise widths overall
-qui summ width_good_`num'
+qui summ `width_good_`num''
 local met_target_width_`num' : di %9.2gc `r(mean)'
 
 forvalues c = 1/`cuts' { 
-		qui summ width_`num' if cat_code==`c', det
+		qui summ `width_`num'' if `cat_code'==`c', det
 		
 		frame post pmstabilityss_cuts_stats (`num') (widths[`c',1]) (widths[`c',2]) (r(mean)) (r(min)) (r(p50)) (r(max)) (`met_target_width_`num'')
 		
@@ -499,14 +519,19 @@ forvalues c = 1/`cuts' {
 
 * create z values based on a threshold value being high 
 if `threshold'!=0 {
-qui gen z_`num' = (logit(`threshold') - lp)/sqrt(var_ind_`num')
-qui gen prob_above_`num' = 1- normal(z_`num')
-qui gen prob_below_`num' = normal(z_`num')
+	tempvar z_`num'
+	tempvar prob_above_`num'
+	tempvar prob_below_`num'
+	tempvar prob_different_`num'
+	
+qui gen `z_`num'' = (logit(`threshold') - `lp_var')/sqrt(`var_ind_`num'')
+qui gen `prob_above_`num'' = 1- normal(`z_`num'')
+qui gen `prob_below_`num'' = normal(`z_`num'')
 
-qui gen prob_different_`num' = .
-qui replace prob_different_`num' = prob_above_`num' if p_true < `threshold'
-qui replace prob_different_`num' = prob_below_`num' if p_true >= `threshold'
-qui su prob_different_`num', det
+qui gen `prob_different_`num'' = .
+qui replace `prob_different_`num'' = `prob_above_`num'' if `p_true' < `threshold'
+qui replace `prob_different_`num'' = `prob_below_`num'' if `p_true' >= `threshold'
+qui su `prob_different_`num'', det
 local textpos = r(max)
 
 frame post pmstabilityss_threshold_stats (`num') (`threshold') (r(mean)) (r(min)) (r(p50)) (r(max)) 
@@ -514,13 +539,13 @@ frame post pmstabilityss_threshold_stats (`num') (`threshold') (r(mean)) (r(min)
 
 
 // classification instability plot
-twoway (scatter prob_different_`num' p_true, sort `nodraw' jitter(0) msym(Oh) msize(tiny) plotr(lcol(black)) mcol(`color') legend(off) xtitle(True risk, size("`text_size'")) ytitle("Proportion of intervals" "with misclassification", size("`text_size'")) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) graphregion(col(white)) name(class_instability_`num', replace) text(`textpos' 1 "N = `num'", size("`text_size'") place(w) just(right)))  
+twoway (scatter `prob_different_`num'' `p_true', sort `nodraw' jitter(0) msym(Oh) msize(tiny) plotr(lcol(black)) mcol(`color') legend(off) xtitle(True risk, size("`text_size'")) ytitle("Proportion of intervals" "with misclassification", size("`text_size'")) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) graphregion(col(white)) name(class_instability_`num', replace) text(`textpos' 1 "N = `num'", size("`text_size'") place(w) just(right)))  
 
 local comp_class_plot_list = "`comp_class_plot_list' class_instability_`num'"
 }
 
 * plot CI for each individual versus their true risk (prediction instability plot)
-twoway (rspike lower_p_`num' upper_p_`num' p_true, `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "N = `num'", size("`text_size'") place(se) just(left))) (lowess lower_p_`num' p_true, sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess upper_p_`num' p_true, sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(instability_plot_`num', replace) 
+twoway (rspike `lower_p_`num'' `upper_p_`num'' `p_true', `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "N = `num'", size("`text_size'") place(se) just(left))) (lowess `lower_p_`num'' `p_true', sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess `upper_p_`num'' `p_true', sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(instability_plot_`num', replace) 
 
 
 local comp_insta_plot_list = "`comp_insta_plot_list' instability_plot_`num'"
@@ -578,12 +603,12 @@ if !_rc {
 		
 	qui levelsof `subgroup' , local(sub)    
     foreach s of local sub {
-		qui summ width_`num' if `subgroup'==`s', det
+		qui summ `width_`num'' if `subgroup'==`s', det
 
 		frame post pmstabilityss_sub_stats (`s') (`num') (r(mean)) (r(min)) (r(p50)) (r(max))
 		
 		* plot CI for each individual versus their true risk (prediction instability plot)
-		twoway (rspike lower_p_`num' upper_p_`num' p_true if `subgroup'==`s', `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "N = `num'" "Subgroup = `s'", size("`text_size'") place(se) just(left))) (lowess lower_p_`num' p_true if `subgroup'==`s', sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess upper_p_`num' p_true if `subgroup'==`s', sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(inst_`num'_`s', replace)  
+		twoway (rspike `lower_p_`num'' `upper_p_`num'' `p_true' if `subgroup'==`s', `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "N = `num'" "Subgroup = `s'", size("`text_size'") place(se) just(left))) (lowess `lower_p_`num'' `p_true' if `subgroup'==`s', sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess `upper_p_`num'' `p_true' if `subgroup'==`s', sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(inst_`num'_`s', replace)  
 
 
 	local comp_sub_`s'_list = "`comp_sub_`s'_list' inst_`num'_`s'"
@@ -599,12 +624,12 @@ foreach num in `ss_tests' {
 		
 	qui levelsof `subgroup' , local(sub)    
     foreach s of local sub {
-		qui summ width_`num' if `subgroup'=="`s'", det
+		qui summ `width_`num'' if `subgroup'=="`s'", det
 
 		frame post pmstabilityss_sub_stats ("`s'") (`num') (r(mean)) (r(min)) (r(p50)) (r(max))
 		
 		* plot CI for each individual versus their true risk (prediction instability plot)
-		twoway (rspike lower_p_`num' upper_p_`num' p_true if `subgroup'=="`s'", `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "Subgroup = `s'" "N = `num'", size("`text_size'") place(se) just(left))) (lowess lower_p_`num' p_true if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess upper_p_`num' p_true if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(inst_`num'_`s', replace) 
+		twoway (rspike `lower_p_`num'' `upper_p_`num'' `p_true' if `subgroup'=="`s'", `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "Subgroup = `s'" "N = `num'", size("`text_size'") place(se) just(left))) (lowess `lower_p_`num'' `p_true' if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess `upper_p_`num'' `p_true' if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(inst_`num'_`s', replace) 
 
 
 	local comp_sub_`s'_list = "`comp_sub_`s'_list' inst_`num'_`s'"
@@ -639,11 +664,10 @@ if "`saving'"!="" {
 ***************
 }
 
-qui cap drop lp intercept unit_v* p_true var_ind* lower_logitp*  upper_logitp* lower_p* upper_p*  width* 
-qui cap drop z_* prob_above_* prob_below_* prob_different_*
-qui cap drop cat_code* avg_p* p_round* var_logit_p* ss_target_var* 
+qui cap drop pmsss_intercept unit_v1
 
 end
+
 
 
 program define pmsimprev, rclass
@@ -874,6 +898,7 @@ qui keep `predictors' `beta' `proportion' `mean' `sd'
 qui drop if _n>`vars'
 **********
 end
+
 
 
 
@@ -1390,6 +1415,8 @@ qui drop if _n>`vars'
 end
 
 
+
+
 program define pmsimcheck, rclass
 
 /* Syntax
@@ -1528,6 +1555,8 @@ return scalar empirical_cstat = `empirical_cstat'
 // return local predictor_list `"`predictor_list'"'
 
 end
+
+
 
 
 program define pmsim, rclass
