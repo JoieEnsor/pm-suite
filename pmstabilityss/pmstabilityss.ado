@@ -81,6 +81,7 @@ if `cuts'!=`user_widths' {
 // check we only have continuous or binary variables
 
 
+
 *******************************
 // create new frame summarising the user dataset for input into pmsim
 
@@ -142,6 +143,8 @@ foreach name in `varlist' {
 	}
 	else { 
 		// continuous vars
+		
+		
 		qui su `name'
 		frame post `pmstabilityss_sumstats' ("`name'") (``token'') (.) (r(mean)) (r(sd))
 		
@@ -210,11 +213,11 @@ tempvar pi
  	local b = `a'+1
 	
 	if `a'==1 {
-		qui gen pi = input_betas[`a',1]*`varname`b''
+		qui gen `pi' = input_betas[`a',1]*`varname`b''
 		
 	}
 	else {
-		qui replace pi = pi + input_betas[`a',1]*`varname`b''
+		qui replace `pi' = `pi' + input_betas[`a',1]*`varname`b''
 		
 	}
 	
@@ -225,7 +228,7 @@ tempvar pi
 
 tempvar lp
 
-qui gen lp = `intercept' + `scalar'*(pi)
+qui gen lp = `intercept' + `scalar'*(`pi')
 
 } // end of loop for if user has not specified LP directly
 else {
@@ -290,7 +293,7 @@ svmat unit_v
 
 ********************************
 
-
+di as txt _n "********************************************************"
 *********************************
 // gen predicted probabilities
 qui gen p_true = invlogit(lp)
@@ -508,8 +511,10 @@ local textpos = r(max)
 
 frame post pmstabilityss_threshold_stats (`num') (`threshold') (r(mean)) (r(min)) (r(p50)) (r(max)) 
 
+
+
 // classification instability plot
-twoway (scatter prob_different_`num' p_true, sort `nodraw' jitter(0) msym(Oh) msize(tiny) plotr(lcol(black)) mcol(`color') legend(off) xtitle(True risk, size("`text_size'")) ytitle("Proportion of intervals" "with misclassification", size("`text_size'")) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) graphregion(col(white)) name(class_instability_`num', replace) text(`textpos' 1 "N = `num'", size("`text_size'") place(w) just(right))) 
+twoway (scatter prob_different_`num' p_true, sort `nodraw' jitter(0) msym(Oh) msize(tiny) plotr(lcol(black)) mcol(`color') legend(off) xtitle(True risk, size("`text_size'")) ytitle("Proportion of intervals" "with misclassification", size("`text_size'")) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) graphregion(col(white)) name(class_instability_`num', replace) text(`textpos' 1 "N = `num'", size("`text_size'") place(w) just(right)))  
 
 local comp_class_plot_list = "`comp_class_plot_list' class_instability_`num'"
 }
@@ -599,7 +604,7 @@ foreach num in `ss_tests' {
 		frame post pmstabilityss_sub_stats ("`s'") (`num') (r(mean)) (r(min)) (r(p50)) (r(max))
 		
 		* plot CI for each individual versus their true risk (prediction instability plot)
-		twoway (rspike lower_p_`num' upper_p_`num' p_true if `subgroup'=="`s'", `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "Subgroup = `s'" "N = `num'", size("`text_size'") place(se) just(left))) (lowess lower_p_`num' p_true if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess upper_p_`num' p_true if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(inst_`num'_`s', replace)  
+		twoway (rspike lower_p_`num' upper_p_`num' p_true if `subgroup'=="`s'", `nodraw' sort jitter(0) lcol(`color') plotr(lcol(black)) text(1 0 "Subgroup = `s'" "N = `num'", size("`text_size'") place(se) just(left))) (lowess lower_p_`num' p_true if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) (lowess upper_p_`num' p_true if `subgroup'=="`s'", sort lcol(black) lpattern(dash) bwidth(0.2)) || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) xtitle(True risk, size("`text_size'")) ytitle("95% Uncertainty interval" "for true risk", size("`text_size'")) aspect(1) graphr(col(white)) name(inst_`num'_`s', replace) 
 
 
 	local comp_sub_`s'_list = "`comp_sub_`s'_list' inst_`num'_`s'"
@@ -626,10 +631,7 @@ if "`nocompare'"!="nocompare" {
 // saving frames
 if "`saving'"!="" {
 	foreach r in overall threshold cuts sub {
-		qui cap frame change pmstabilityss_`r'_stats
-		if !_rc {
-			qui save pmstss_`r'_`saving', replace
-		}
+		qui cap frames save pmstss_`r'_`saving', frames(pmstabilityss_`r'_stats) replace
 	}
 	
 }
@@ -637,8 +639,9 @@ if "`saving'"!="" {
 ***************
 }
 
-end
+qui cap drop lp intercept unit_v* p_true var_ind* lower_logitp*  upper_logitp* lower_p* upper_p*  width* cat_code* avg_p* p_round* var_logit_p* ss_target_var* width*
 
+end
 
 
 program define pmsimprev, rclass
@@ -798,12 +801,13 @@ while (abs(`emp_prev' - `target_prev') > `tolerance') {
 		matlist output_pmsimprev,  aligncolnames(r) name(c) cspec(o2& w12 | w12 | w12 | w12 | w12 | w12 o2&) rspec(&-&)
 	} 
 	else {
-		mat iter_`iter' = (`iter' , `target_prev', `int_low', `int_mid', `int_high', `emp_prev')
-		mat colnames iter_`iter' = Iteration Target_prev Lower_bound Intercept Upper_bound Emp_prev 
-		mat rownames iter_`iter' = `iter'
-		mat rowjoin output_pmsimprev = output_pmsimprev iter_`iter'
+		tempname iter_`iter'
+		mat `iter_`iter'' = (`iter' , `target_prev', `int_low', `int_mid', `int_high', `emp_prev')
+		mat colnames `iter_`iter'' = Iteration Target_prev Lower_bound Intercept Upper_bound Emp_prev 
+		mat rownames `iter_`iter'' = `iter'
+		mat rowjoin output_pmsimprev = output_pmsimprev `iter_`iter''
 	
-		matlist iter_`iter',  aligncolnames(r) name(n) cspec(o2& w12 | w12 | w12 | w12 | w12 | w12 o2&) rspec(-&)
+		matlist `iter_`iter'',  aligncolnames(r) name(n) cspec(o2& w12 | w12 | w12 | w12 | w12 | w12 o2&) rspec(-&)
 	}
 	}
 	else {
@@ -816,10 +820,11 @@ while (abs(`emp_prev' - `target_prev') > `tolerance') {
 		nois _dots `iter' 0
 	} 
 	else {
-		mat iter_`iter' = (`iter' , `target_prev', `int_low', `int_mid', `int_high', `emp_prev')
-		mat colnames iter_`iter' = Iteration Target_prev Lower_bound Intercept Upper_bound Emp_prev 
-		mat rownames iter_`iter' = `iter'
-		mat rowjoin output_pmsimprev = output_pmsimprev iter_`iter'
+		tempname iter_`iter'
+		mat `iter_`iter'' = (`iter' , `target_prev', `int_low', `int_mid', `int_high', `emp_prev')
+		mat colnames `iter_`iter'' = Iteration Target_prev Lower_bound Intercept Upper_bound Emp_prev 
+		mat rownames `iter_`iter'' = `iter'
+		mat rowjoin output_pmsimprev = output_pmsimprev `iter_`iter''
 	
 		nois _dots `iter' 0
 	}
@@ -867,7 +872,6 @@ qui keep `predictors' `beta' `proportion' `mean' `sd'
 qui drop if _n>`vars'
 **********
 end
-
 
 
 
@@ -1384,7 +1388,6 @@ qui drop if _n>`vars'
 end
 
 
-
 program define pmsimcheck, rclass
 
 /* Syntax
@@ -1523,7 +1526,6 @@ return scalar empirical_cstat = `empirical_cstat'
 // return local predictor_list `"`predictor_list'"'
 
 end
-
 
 
 program define pmsim, rclass
