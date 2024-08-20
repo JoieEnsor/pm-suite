@@ -44,11 +44,14 @@
 *	- updated "lowess" language to "smoother" in general		 *	
 *	Updated: 06/03/2024											 *
 *	- bug fix for smoother package dependency					 *
+*	Updated: 20/08/2024											 *
+*	- bug fix for TTE smoother package dependency				 *
+*	- restraints for smootherci at extremes						 *
 *																 *
-*  2.2.2 J. Ensor								 				 *
+*  2.2.3 J. Ensor								 				 *
 ******************************************************************
 
-*! 2.2.2 J.Ensor 06Mar2024
+*! 2.2.3 J.Ensor 20Aug2024
 
 program define pmcalplot, rclass
 
@@ -108,6 +111,11 @@ tempvar binvar obs obsn exp binvar2 exp2 events nonevents outcomp ///
 			di as txt "Package 'running' is required for this version on pmcalplot" _n "Installation will begin now ..."
 			ssc install `pack', replace
 			}
+		}
+		
+		capture which stpci 
+		if _rc==111 {
+			net install st0202_1, from(http://www.stata-journal.com/software/sj15-3/) replace
 		}
 		
 // check on the if/in statement
@@ -414,8 +422,10 @@ if "`smoother'"!="nosmoother" {
 		qui running `2' `1' if `touse', span(1) ci generate(`lowvar') gense(`lowvar_se') replace nog
 		qui gen `lowvar_lci' = `lowvar' - (1.96*`lowvar_se')
 		qui replace `lowvar_lci'=0 if `lowvar_lci'<0
+		qui replace `lowvar_lci'=1 if `lowvar_lci'>1
 		qui gen `lowvar_uci' = `lowvar' + (1.96*`lowvar_se')
 		qui replace `lowvar_uci'=1 if `lowvar_uci'>1
+		qui replace `lowvar_uci'=0 if `lowvar_uci'<0
 	}
 	if "`survival'"=="survival" {
 		if "`lp'"!="" {
@@ -440,8 +450,10 @@ if "`smoother'"!="nosmoother" {
 			qui running `pseudo' `1' if `touse', span(1) ci generate(`lowvar') gense(`lowvar_se') replace nog
 			qui gen `lowvar_lci' = `lowvar' - (1.96*`lowvar_se')
 			qui replace `lowvar_lci'=0 if `lowvar_lci'<0
+			qui replace `lowvar_lci'=1 if `lowvar_lci'>1
 			qui gen `lowvar_uci' = `lowvar' + (1.96*`lowvar_se')
 			qui replace `lowvar_uci'=1 if `lowvar_uci'>1
+			qui replace `lowvar_uci'=0 if `lowvar_uci'<0
 		}
 		else {
 			local smoother = "nosmoother"
@@ -828,6 +840,7 @@ if "`faster'"=="faster" {
 	
 ***************************************** CI
 
+
 if "`hanley'"=="" {
 	// default use necombe SE formula
 	local newcombe_c = `cstat'
@@ -863,7 +876,6 @@ local res cstat
 		matrix `rmat'[`i',4] = ``r'_lb'
 		matrix `rmat'[`i',5] = ``r'_ub'
 
-		//local rown "`rown' `r'"
 		}
 		mat colnames `rmat' = Obs Estimate SE Lower_CI Upper_CI
 		mat rownames `rmat' = "C-Statistic" //`rown'
@@ -908,4 +920,9 @@ local res cstat cstat_se cstat_lb cstat_ub cord disc ties  obs
 restore
 
 end
+ 
 
+*******************************************************************************
+*********************************************************************************
+*********************************************************************************
+****************************************
