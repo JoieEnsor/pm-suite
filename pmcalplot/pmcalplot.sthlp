@@ -27,6 +27,7 @@ General options available for all outcome types are given below.
 {synopt :{opt nost:atistics}}suppresses display of performance statistics{p_end}
 {synopt :{opt r:ange(# #)}}a range describing the square size of the plot region{p_end}
 {synopt :{opt sc:atteropts(string)}}twoway options to affect rendition of the groups{p_end}
+{synopt :{opt span(real 1)}}set the span parameter for calculation of the smoother{p_end}
 {synopt :{opt nosm:oother}}suppresses display of the smoother{p_end}
 {synopt :{opt nosmootherci}}suppresses display of the CI for the smoother{p_end}
 {synopt :{opt sm:ootheropts(string)}}twoway options to affect rendition of the smoother{p_end}
@@ -124,6 +125,8 @@ Useful for prediction models with a narrow range of predictions.
 {phang}{opt scatteropts(string)} specifies any additional options to describe the rendition of the scatter plot. See {helpb scatter}.
 
 {phang}{opt ciopts(string)} specifies any additional options to describe the rendition of the confidence intervals. See {helpb twoway_rspike}.
+
+{phang}{opt span} set the span parameter for calculation of the smoother, default span is 1. 
 
 {phang}{opt nosmoother} specifies that the smoother not be calculated and displayed on the calibration plot (note this may be computationally faster for large datasets).
 
@@ -308,5 +311,5 @@ Ensor J. Calibration plots of prediction model performance in Stata using pmcalp
 {title:Also see}
 
 {psee}
-Online: {helpb twoway_options}, {helpb running}
+Online: {helpb twoway_options}, {helpb running}, {helpb pmsampsize}, {helpb pmvalsampsize}
 {p_end}

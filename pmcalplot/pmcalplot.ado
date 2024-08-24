@@ -46,12 +46,14 @@
 *	- bug fix for smoother package dependency					 *
 *	Updated: 20/08/2024											 *
 *	- bug fix for TTE smoother package dependency				 *
-*	- restraints for smootherci at extremes						 *
+*	Updated: 24/08/2024											 *
+*	- added span() option for smoother 							 *
+*	- updated plot constraints for smoother CI 					 *
 *																 *
 *  2.2.3 J. Ensor								 				 *
 ******************************************************************
 
-*! 2.2.3 J.Ensor 20Aug2024
+*! 2.2.3 J.Ensor 24Aug2024
 
 program define pmcalplot, rclass
 
@@ -89,7 +91,7 @@ version 12.1
 	syntax varlist(min=1 max=2 numeric) [if] [in], [Bin(int 10) ///
 						CUTpoints(numlist >=0 <=1 sort) noSMoother noSPike ///
 						CI noSMOOTHERCI SCatteropts(string asis) ///
-						Range(numlist min=2 max=2 sort) ///
+						Range(numlist min=2 max=2 sort) SPAN(real 1) ///
 						SMootheropts(string asis) SMOOTHERCIopts(string asis) ///
 						SPikeopts(string asis) CIopts(string asis) noStatistics SURVival ///
 						Timepoint(int 1) KEEP CONTinuous noHist ADDPLOT(string asis) ///
@@ -419,13 +421,11 @@ if "`range'"!="" {
 // derive and save smoother variable
 if "`smoother'"!="nosmoother" {
 	if "`survival'"!="survival" & "`continuous'"!="continuous" {
-		qui running `2' `1' if `touse', span(1) ci generate(`lowvar') gense(`lowvar_se') replace nog
+		qui running `2' `1' if `touse', span(`span') ci generate(`lowvar') gense(`lowvar_se') replace nog
 		qui gen `lowvar_lci' = `lowvar' - (1.96*`lowvar_se')
-		qui replace `lowvar_lci'=0 if `lowvar_lci'<0
-		qui replace `lowvar_lci'=1 if `lowvar_lci'>1
+
 		qui gen `lowvar_uci' = `lowvar' + (1.96*`lowvar_se')
-		qui replace `lowvar_uci'=1 if `lowvar_uci'>1
-		qui replace `lowvar_uci'=0 if `lowvar_uci'<0
+
 	}
 	if "`survival'"=="survival" {
 		if "`lp'"!="" {
@@ -447,13 +447,11 @@ if "`smoother'"!="nosmoother" {
 				qui replace `pseudo' = `pseudo`i'' if `groups' == `i'
 			}
 
-			qui running `pseudo' `1' if `touse', span(1) ci generate(`lowvar') gense(`lowvar_se') replace nog
+			qui running `pseudo' `1' if `touse', span(`span') ci generate(`lowvar') gense(`lowvar_se') replace nog
 			qui gen `lowvar_lci' = `lowvar' - (1.96*`lowvar_se')
-			qui replace `lowvar_lci'=0 if `lowvar_lci'<0
-			qui replace `lowvar_lci'=1 if `lowvar_lci'>1
+
 			qui gen `lowvar_uci' = `lowvar' + (1.96*`lowvar_se')
-			qui replace `lowvar_uci'=1 if `lowvar_uci'>1
-			qui replace `lowvar_uci'=0 if `lowvar_uci'<0
+
 		}
 		else {
 			local smoother = "nosmoother"
@@ -464,16 +462,16 @@ if "`smoother'"!="nosmoother" {
 	if "`continuous'"=="continuous" {
 		qui running `2' `1' if `touse', span(1) ci generate(`lowvar') gense(`lowvar_se') replace nog
 		qui gen `lowvar_lci' = `lowvar' - (1.96*`lowvar_se')
-		*qui replace `lowvar_lci'=0 if `lowvar_lci'<0
+		
 		qui gen `lowvar_uci' = `lowvar' + (1.96*`lowvar_se')
-		*qui replace `lowvar_uci'=1 if `lowvar_uci'>1
+		
 	}
 	
 	}
 
 // graph command locals (all combinations of hist/smoother or not)
 if "`smootherci'"!="nosmootherci" {
-local lo1 = cond("`smoother'"=="nosmoother","","|| line `lowvar' `1' if (`lowvar'<=`maxr') & (`lowvar'>=`minr') & (`1'<=`maxr') & (`1'>=`minr') & (`touse'), sort lcol(midblue) `smootheropts' || rarea `lowvar_uci' `lowvar_lci' `1' if `touse', sort fc(midblue%20) lc(midblue%20) `smootherciopts'")
+local lo1 = cond("`smoother'"=="nosmoother","","|| line `lowvar' `1' if (`lowvar'<=`maxr') & (`lowvar'>=`minr') & (`1'<=`maxr') & (`1'>=`minr') & (`touse'), sort lcol(midblue) `smootheropts' || rarea `lowvar_uci' `lowvar_lci' `1' if (`lowvar_uci'<=`maxr') & (`lowvar_uci'>=`minr') & (`lowvar_lci'<=`maxr') & (`lowvar_lci'>=`minr') & (`1'<=`maxr') & (`1'>=`minr') & (`touse'), sort fc(midblue%20) lc(midblue%20) `smootherciopts'")
 }
 else {
 local lo1 = cond("`smoother'"=="nosmoother","","|| line `lowvar' `1' if (`lowvar'<=`maxr') & (`lowvar'>=`minr') & (`1'<=`maxr') & (`1'>=`minr') & (`touse'), sort lcol(midblue) `smootheropts'")
@@ -667,6 +665,38 @@ if "`keep'"=="keep" {
 		}
 		else {
 			rename `exp' exp_pmcalplot
+		    }
+			
+	capture confirm variable lowvar
+	if !_rc {
+		di as err "Variable with name 'lowvar' already exists, pmcalplot cannot generate required variables"
+		}
+		else {
+			rename `lowvar' lowvar
+		    }
+			
+	capture confirm variable lowvar_se
+	if !_rc {
+		di as err "Variable with name 'lowvar_se' already exists, pmcalplot cannot generate required variables"
+		}
+		else {
+			rename `lowvar_se' lowvar_se
+		    }
+			
+	capture confirm variable lowvar_lci
+	if !_rc {
+		di as err "Variable with name 'lowvar_lci' already exists, pmcalplot cannot generate required variables"
+		}
+		else {
+			rename `lowvar_lci' lowvar_lci
+		    }
+			
+	capture confirm variable lowvar_uci
+	if !_rc {
+		di as err "Variable with name 'lowvar_uci' already exists, pmcalplot cannot generate required variables"
+		}
+		else {
+			rename `lowvar_uci' lowvar_uci
 		    }
 	
 	if "`continuous'"!="continuous" {
