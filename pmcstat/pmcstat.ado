@@ -1,5 +1,22 @@
 
+**************************************************
+*												 *
+*  PROGRAM TO CALCULATE C-STAT					 *
+*  16/06/21 									 *
+*  			 									 *
+*	Updated: 17/01/2025							 *
+*	- moved to using frames 					 *
+*	- substantial speed gains					 *
+*												 *
+*  1.0.1 J. Ensor								 *
+**************************************************
+
+*! 1.0.1 J.Ensor 17Jan2025
+
+
 program define pmcstat, rclass
+
+version 16
 
 /* Syntax
 	VARLIST = A list of two variables, the linear predictor for the model,
@@ -9,12 +26,17 @@ program define pmcstat, rclass
 */
 
 syntax varlist(min=1 max=2 numeric) [if] [in], [noPRINT  ///
-				MATrix(name local) HANley FASTER]
+				MATrix(name local) HANley]
 
 *********************************************** SETUP/CHECKS
 *SET UP TEMPs
 tempvar p rank_disc rank2_disc diff_disc inv_outcome rank_cord rank2_cord diff_cord
 
+// store current frame
+local curframe = c(frame)
+
+frame `curframe' {
+	
 // check on the if/in statement 
 marksample touse
 qui count if `touse'
@@ -29,6 +51,11 @@ tokenize `varlist' , parse(" ", ",")
 local lp = `"`1'"'
 local outcome = `"`2'"'
 
+// move to new frame
+tempname pmcstat_frame_105
+frame put `lp' `outcome' if `touse', into(`pmcstat_frame_105')
+frame change `pmcstat_frame_105'
+
 // generate probabilities
 qui gen `p' = exp(`lp')/(1+exp(`lp'))
 
@@ -42,109 +69,88 @@ if `varcountcheck'!=2 {
 	}
 
 // check outcome is binary
-cap assert `outcome'==0 | `outcome'==1 if `touse'
+cap assert `outcome'==0 | `outcome'==1 
         if _rc~=0 {
                 noi di as err "Event indicator `outcome' must be coded 0 or 1"
                 error 450
         }
 
-// preserve data & keep only the touse sample
-preserve
-qui keep if `touse'
 
 *********************************************** C-STAT
 
-if "`faster'"=="faster" {
-	// check for packages 
-	local packs gtools
-	foreach pkg of local packs {
-		capture which `pkg'
-		if _rc==111 {	
-			ssc install `pkg'
-			}
-		}
-		
-	// discordant pairs
-	hashsort `p' `outcome' 		
-	qui gen `rank_disc' = _n if `touse'
+// discordant pairs
+sort `p' `outcome' 		
+qui gen `rank_disc' = _n 
 
-	hashsort `outcome' `p' `rank_disc'
-	qui gen `rank2_disc' = _n if `touse'
+sort `outcome' `p' `rank_disc' 
+qui gen `rank2_disc' = _n 
 
-	qui gen `diff_disc' = (`rank_disc' - `rank2_disc') if (`outcome'==0) & (`touse')
+qui gen `diff_disc' = (`rank_disc' - `rank2_disc') if (`outcome'==0) 
 
-	// concordant pairs
-	qui gen `inv_outcome' = (`outcome'==0)
-	hashsort `p' `inv_outcome'
-	qui gen `rank_cord' = _n if `touse'
+// concordant pairs
+qui gen `inv_outcome' = (`outcome'==0) 
+sort `p' `inv_outcome' 
+qui gen `rank_cord' = _n 
 
-	hashsort `inv_outcome' `p' `rank_cord'
-	qui gen `rank2_cord' = _n if `touse'
+sort `inv_outcome' `p' `rank_cord' 
+qui gen `rank2_cord' = _n 
 
-	qui gen `diff_cord' = (`rank_cord' - `rank2_cord') if `inv_outcome'==0
+qui gen `diff_cord' = (`rank_cord' - `rank2_cord') if (`inv_outcome'==0) 
 
-	// total possible pairs
-	qui gstats sum `outcome' if (`outcome'!=.) & (`touse'), meanonly
-	local obs = r(N)
-	local prev = r(mean)
-	local events = r(sum)
-	local nonevents = r(N) - r(sum)
-	local pairs = `events'*`nonevents'  
+// total possible pairs
+qui su `outcome' if (`outcome'!=.), meanonly 
+local obs = r(N)
+local prev = r(mean)
+local events = r(sum)
+local nonevents = r(N) - r(sum)
+local pairs = `events'*`nonevents'  
 
-	// compute c-stat (allowing for ties)
-	qui gstats sum `diff_disc' if `touse'
-	local disc = r(sum)
-	qui gstats sum `diff_cord' if `touse'
-	local cord = r(sum)
+// compute c-stat (allowing for ties)
+qui su `diff_disc' 
+local disc = r(sum)
+qui su `diff_cord' 
+local cord = r(sum)
 
-	local ties = `pairs'-`disc'-`cord'
+local ties = `pairs'-`disc'-`cord'
 
-	local cstat = (`cord'+(0.5*`ties'))/(`pairs')
-	}
-	else {
-		// discordant pairs
-		sort `p' `outcome' 		
-		qui gen `rank_disc' = _n if `touse'
-
-		sort `outcome' `p' `rank_disc' 
-		qui gen `rank2_disc' = _n if `touse'
-
-		qui gen `diff_disc' = (`rank_disc' - `rank2_disc') if (`outcome'==0) & (`touse')
-
-		// concordant pairs
-		qui gen `inv_outcome' = (`outcome'==0) if `touse'
-		sort `p' `inv_outcome' 
-		qui gen `rank_cord' = _n if `touse'
-
-		sort `inv_outcome' `p' `rank_cord' 
-		qui gen `rank2_cord' = _n if `touse'
-
-		qui gen `diff_cord' = (`rank_cord' - `rank2_cord') if (`inv_outcome'==0) & (`touse')
-
-		// total possible pairs
-		qui su `outcome' if (`outcome'!=.) & (`touse'), meanonly
-		local obs = r(N)
-		local prev = r(mean)
-		local events = r(sum)
-		local nonevents = r(N) - r(sum)
-		local pairs = `events'*`nonevents'  
-
-		// compute c-stat (allowing for ties)
-		qui su `diff_disc' if `touse'
-		local disc = r(sum)
-		qui su `diff_cord' if `touse'
-		local cord = r(sum)
-
-		local ties = `pairs'-`disc'-`cord'
-
-		local cstat = (`cord'+(0.5*`ties'))/(`pairs')
-	}
+local cstat = (`cord'+(0.5*`ties'))/(`pairs')
+	
 	
 ***************************************** CI
+/*
+local logit_c = logit(`cstat')
 
+local var_logit_c = (1+(`obs'/2-1)*(1-`cstat')/(2-`cstat')+(`obs'/2-1)*`cstat'/(1+`cstat'))/(`cstat'*(1-`cstat')*`events'*(`obs'-`events'))
+
+local logit_c_se = `var_logit_c'^.5
+local logit_c_lb = `logit_c' - (1.96*`logit_c_se')
+local logit_c_ub = `logit_c' + (1.96*`logit_c_se')
+
+local cstat_se = (`var_logit_c'*(`cstat'*(1-`cstat'))^2)^.5 // incorrect - formula should use var(c) but we do not have this - see debray appendix eq.55
+local cstat_lb = invlogit(`logit_c_lb')
+local cstat_ub = invlogit(`logit_c_ub')
+
+local norm_c = `cstat'
+local norm_c_se = ((`cstat'*(1-`cstat'))/`obs')^.5
+local norm_c_lb = `cstat' - (1.96*`norm_c_se')
+local norm_c_ub = `cstat' + (1.96*`norm_c_se')
+
+local newcombe_c = `cstat'
+local newcombe_c_se = ((`cstat'*(1-`cstat'))*(1+(((`obs'/2)-1)*((1-`cstat')/(2-`cstat'))) ///
++((((`obs'/2)-1)*`cstat')/(1+`cstat')))/((`obs'^2)*`prev'*(1-`prev')))^.5
+local newcombe_c_lb = `cstat' - (1.96*`newcombe_c_se')
+local newcombe_c_ub = `cstat' + (1.96*`newcombe_c_se')
+
+local Q1 = `cstat' / (2 - `cstat')
+local Q2 = 2 * `cstat'^2 / (1 + `cstat')
+local hanley_c = `cstat'
+local hanley_c_se = sqrt((`cstat' * (1 - `cstat') + (`nonevents' - 1) * (`Q1' - `cstat'^2) + (`events' - 1) * (`Q2' - `cstat'^2)) / (`nonevents' * `events'))
+local hanley_c_lb = `cstat' - (1.96*`hanley_c_se')
+local hanley_c_ub = `cstat' + (1.96*`hanley_c_se')
+*/
 
 if "`hanley'"=="" {
-	// default use newcombe SE formula
+	// default use necombe SE formula
 	local newcombe_c = `cstat'
 	local cstat_se = ((`cstat'*(1-`cstat'))*(1+(((`obs'/2)-1)*((1-`cstat')/(2-`cstat'))) ///
 	+((((`obs'/2)-1)*`cstat')/(1+`cstat')))/((`obs'^2)*`prev'*(1-`prev')))^.5
@@ -181,14 +187,16 @@ local res cstat
 		
 		}
 		mat colnames `rmat' = Obs Estimate SE Lower_CI Upper_CI
-		mat rownames `rmat' = "C-Statistic" //`rown'
+		mat rownames `rmat' = "C-Statistic" 
+
 		
 // print matrix 
 if "`matrix'"!="" {
 			matrix `matrix' = `rmat'
 			
+			//return matrix `matrix' = `rmat' 
 			if "`print'"!="noprint" {
-				
+				//di as res _n "Discrimination statistics ..."
 				matlist `matrix', border(all) 
 							
 				}
@@ -196,7 +204,7 @@ if "`matrix'"!="" {
 			}
 			else { 
 				if "`print'"!="noprint" {
-					
+					//di as res _n "Discrimination statistics ..."
 					matlist `rmat', border(all) 
 							
 					}
@@ -217,8 +225,8 @@ local res cstat cstat_se cstat_lb cstat_ub cord disc ties  obs
 		else {
 		    return matrix rmat = `rmat'
 		}
-		
-restore
+
+
+}
 
 end
-  
