@@ -233,6 +233,9 @@ qui gen `lp_var' = `intercept' + `scalar'*(`pi')
 
 } // end of loop for if user has not specified LP directly
 else {
+
+tempvar lp_var
+
 	qui gen `lp_var' = `lp'
 }
 
