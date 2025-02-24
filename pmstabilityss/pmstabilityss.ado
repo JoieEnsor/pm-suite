@@ -542,7 +542,7 @@ frame post pmstabilityss_threshold_stats (`num') (`threshold') (r(mean)) (r(min)
 
 
 // classification instability plot
-twoway (scatter `prob_different_`num'' `p_true', sort `nodraw' jitter(0) msym(Oh) msize(tiny) plotr(lcol(black)) mcol(`color') legend(off) xtitle(True risk, size("`text_size'")) ytitle("Proportion of intervals" "with misclassification", size("`text_size'")) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) graphregion(col(white)) name(class_instability_`num', replace) text(`textpos' 1 "N = `num'", size("`text_size'") place(w) just(right)))  
+twoway (scatter `prob_different_`num'' `p_true', sort `nodraw' jitter(0) msym(Oh) msize(tiny) plotr(lcol(black)) mcol(`color') legend(off) xtitle(True risk, size("`text_size'")) ytitle("Probability of misclassification", size("`text_size'")) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("`text_size'")) graphregion(col(white)) name(class_instability_`num', replace) text(`textpos' 1 "N = `num'", size("`text_size'") place(w) just(right)))  
 
 local comp_class_plot_list = "`comp_class_plot_list' class_instability_`num'"
 }
