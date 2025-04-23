@@ -744,8 +744,7 @@ end
 **************************************************
 
 *! 1.0.1 J.Ensor 17Jan2025
-clear
-capture program drop pmcstat
+
 
 program define pmcstat, rclass
 
