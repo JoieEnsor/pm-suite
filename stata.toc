@@ -5,4 +5,4 @@ p pmvalsampsize Calculates the minimum sample size required for external validat
 p pmcalplot Calibration plot of prediction model performance
 p pmstabilityss Calculates minimum sample size for developing a model targeting precise individual risk estimates
 p pmcstat Calculates the C-statistic for a prediction model
-p pmstability Produces stability plots following a GLM
+p pmstabilityplots Produces stability plots following a GLM
