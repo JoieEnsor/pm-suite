@@ -1,0 +1,4 @@
+d pmstabilityplots | Stability plot 'of' prediction model performance at development
+d Distribution-date: 2025-04-25
+d Joie Ensor (j.ensor@bham.ac.uk)
+f pmstabilityplots/pmstabilityplots.ado
