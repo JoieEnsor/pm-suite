@@ -15,7 +15,7 @@
 
 program define pmvalsampsize, rclass
 
-version 12.1
+version 16
 
 /* Syntax
 	CONTINUOUS = use pmvalsampsize for continuous outcome model sample size
@@ -37,7 +37,7 @@ version 12.1
 
 syntax ,   TYPE(string) ///
 			[RSQuared(real 0) RSQCIwidth(real 0.1) /// 
-			CSlope(real 1) CSCIwidth(real 0.2) /// 
+			CSlope(real 1) CSCIwidth(real 0.2) BOOT(int 100) /// 
 			CITL(real 0) CITLCIwidth(real 0) VAROBS(real 0) /// 
 			PREValence(real 0) SIMOBS(int 1000000) /// 
 			CSTATistic(real 0) CSTATCIwidth(real 0.1) ///
@@ -61,6 +61,13 @@ if "`type'"=="b" {
 	}
 	else {
 	    local graph_ind ""
+	}
+
+	if "`calcurves'"=="calcurves" {
+			local calcurves_ind "calcurves"
+	}
+	else {
+	    local calcurves_ind ""
 	}
 	
 	if "`trace'"=="trace" {
@@ -86,7 +93,7 @@ if "`type'"=="b" {
 		
 		binary_val_samp_size, prev(`prevalence') cstat(`cstatistic') ///
 				oe(`oe') oeci(`oeciwidth') oeseinc(`oeseincrement') ///
-				cs(`cslope') csciwidth(`csciwidth') ///
+				cs(`cslope') csciwidth(`csciwidth') boot(`boot') ///
 				cstatci(`cstatciwidth') simobs(`simobs') ///
 				sens(`sensitivity') spec(`specificity') thresh(`threshold') ///
 				nbciwidth(`nbciwidth') nbseincrement(`nbseincrement') ///
@@ -94,7 +101,7 @@ if "`type'"=="b" {
 				recallciwidth(`recallciwidth') precisionciwidth(`precisionciwidth') ///
 				specciwidth(`specciwidth') accuracyciwidth(`accuracyciwidth') ///
 				fscoreciwidth(`fscoreciwidth') npvciwidth(`npvciwidth') ///
-				`graph_ind' `trace_ind' `verbose_ind'
+				`graph_ind' `trace_ind' `verbose_ind' `calcurves_ind'
 		
 	}
 	else if "`lpskewednormal'"!="" {
@@ -106,7 +113,7 @@ if "`type'"=="b" {
 		
 		binary_val_samp_size, prev(`prevalence') cstat(`cstatistic') ///
 				oe(`oe') oeci(`oeciwidth') oeseinc(`oeseincrement') ///
-				cs(`cslope') csciwidth(`csciwidth') ///
+				cs(`cslope') csciwidth(`csciwidth') boot(`boot') ///
 				cstatci(`cstatciwidth') simobs(`simobs') ///
 				sens(`sensitivity') spec(`specificity') thresh(`threshold') ///
 				nbciwidth(`nbciwidth') nbseincrement(`nbseincrement') ///
@@ -114,7 +121,7 @@ if "`type'"=="b" {
 				recallciwidth(`recallciwidth') precisionciwidth(`precisionciwidth') ///
 				specciwidth(`specciwidth') accuracyciwidth(`accuracyciwidth') ///
 				fscoreciwidth(`fscoreciwidth') npvciwidth(`npvciwidth') ///
-				`graph_ind' `trace_ind' `verbose_ind'
+				`graph_ind' `trace_ind' `verbose_ind' `calcurves_ind'
 		
 	}
 	else if "`lpbeta'"!="" {
@@ -126,7 +133,7 @@ if "`type'"=="b" {
 		
 		binary_val_samp_size, prev(`prevalence') cstat(`cstatistic') ///
 				oe(`oe') oeci(`oeciwidth') oeseinc(`oeseincrement') ///
-				cs(`cslope') csciwidth(`csciwidth') ///
+				cs(`cslope') csciwidth(`csciwidth') boot(`boot') ///
 				cstatci(`cstatciwidth') simobs(`simobs') ///
 				sens(`sensitivity') spec(`specificity') thresh(`threshold') ///
 				nbciwidth(`nbciwidth') nbseincrement(`nbseincrement') ///
@@ -134,7 +141,7 @@ if "`type'"=="b" {
 				recallciwidth(`recallciwidth') precisionciwidth(`precisionciwidth') ///
 				specciwidth(`specciwidth') accuracyciwidth(`accuracyciwidth') ///
 				fscoreciwidth(`fscoreciwidth') npvciwidth(`npvciwidth') ///
-				`graph_ind' `trace_ind' `verbose_ind'
+				`graph_ind' `trace_ind' `verbose_ind' `calcurves_ind'
 		
 	}
 	else if "`lpnormal'"=="" & "`lpskewednormal'"=="" & "`lpbeta'"=="" & "`lpcstat'"=="" {
@@ -146,7 +153,7 @@ if "`type'"=="b" {
 	else {
 		binary_val_samp_size, prev(`prevalence') cstat(`cstatistic') ///
 				oe(`oe') oeci(`oeciwidth') oeseinc(`oeseincrement') ///
-				cs(`cslope') csciwidth(`csciwidth') ///
+				cs(`cslope') csciwidth(`csciwidth') boot(`boot') ///
 				cstatci(`cstatciwidth') simobs(`simobs') ///
 				sens(`sensitivity') spec(`specificity') thresh(`threshold') ///
 				nbciwidth(`nbciwidth') nbseincrement(`nbseincrement') ///
@@ -154,7 +161,7 @@ if "`type'"=="b" {
 				recallciwidth(`recallciwidth') precisionciwidth(`precisionciwidth') ///
 				specciwidth(`specciwidth') accuracyciwidth(`accuracyciwidth') ///
 				fscoreciwidth(`fscoreciwidth') npvciwidth(`npvciwidth') ///
-				`graph_ind' `trace_ind' `verbose_ind'
+				`graph_ind' `trace_ind' `verbose_ind' `calcurves_ind'
 				
 		ret sca non_event_mean = r(non_event_mean)
 		ret sca event_mean = r(event_mean)
@@ -216,7 +223,7 @@ end
 ******* start of binary
 program define binary_val_samp_size, rclass
 
-version 12.1
+version 16
 
 /* Syntax
 	PREVALENCE = prevalence of outcome 
@@ -244,7 +251,7 @@ version 12.1
 
 syntax , PREValence(real) CSTATistic(real) ///
 			[OE(real 1) OECIwidth(real 0.2) ///
-			 CSlope(real 1) CSCIwidth(real 0.2) ///
+			 CSlope(real 1) CSCIwidth(real 0.2) BOOT(int 100) ///
 			 CSTATCIwidth(real 0.1) SIMOBS(int 1000000) ///
 			 LPNORMal(numlist max=2) LPSKEWednormal(numlist max=4) ///
 			 LPBETA(numlist max=2) LPCSTAT(numlist max=1) /// 
@@ -331,6 +338,17 @@ set seed `seed'
 	
 // parse distribution parameters & generate LP values 
 if "`lpskewednormal'"!="" {
+
+		// check for packages 
+		local package sknor
+		foreach pack of local package {
+			capture which `pack'
+			if _rc==111 {	
+				di as txt "Package sknor is required for this version of pmvalsampsize" _n "Installation will begin now ..."
+				ssc install `pack', replace
+				}
+			}
+
 		local lpdist "skewednormal"
 		tokenize `lpskewednormal' , parse(" ", ",")
 		local mean = `1'
@@ -594,6 +612,33 @@ if "`lpskewednormal'"!="" {
 	local n2 = ceil(`I_00'/(`se_cslope'*`se_cslope'*((`I_00'*`I_11')-(`I_01'*`I_01'))))
 	
 	local E2 = `n2'*`prevalence'
+
+// calibration instability plots
+	if "`calcurves'"=="calcurves" {
+		local curframe = c(frame)
+		frame put LP , into(pmval_calcurves)
+		frame change pmval_calcurves
+		
+		qui gen p = exp(LP)/(1+exp(LP)) 
+		qui gen outcome = rbinomial(1,p)
+		
+		qui gen bsindex = .
+		di "Generating calibration curves plot ... "
+		forvalues i=1/`boot' {
+			qui replace bsindex = ceil(runiform()*_N)
+			qui gen LP`i' = LP[bsindex]
+			qui gen p`i' = p[bsindex]
+			qui gen outcome`i' = outcome[bsindex]
+			
+			local cal_instability_plots `cal_instability_plots'  (lowess outcome`i' p`i', bw(1) lc(gs10)) 
+			
+			nois _dots `i' 0
+		}
+		
+		twoway `cal_instability_plots' || function y = x, clpat(solid) clcol(black) legend(off) xlab(#5, angle(h) grid nogextend format(%3.1f) labsize("medsmall")) ylab(#5, angle(h) grid nogextend format(%3.1f) labsize("medsmall")) xtitle("Expected", size("medsmall")) ytitle("Observed", size("medsmall")) aspect(1) graphr(col(white)) name(calcurves_plot, replace)
+		
+	frame change `curframe'
+	}
 	
 // CRITERIA 4 - NET BENEFIT
 local estimate_nb = `sensitivity'+`specificity'
