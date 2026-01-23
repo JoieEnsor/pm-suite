@@ -213,9 +213,11 @@ local rsquared = 0
 			error 103
 		}
 		
+		local n = 10000
+		local tot_per_yrs = `meanfup'*`n'
 		local events = `parameters'*`rate'*`meanfup'
-		local lnLnull = (`events'*(ln(`events'/`parameters')))-`events'
-		local max_r2a = (1- exp((2*`lnLnull')/`parameters'))
+		local lnLnull = (`events'*(ln(`events'/`tot_per_yrs')))-`events'
+		local max_r2a = (1- exp((2*`lnLnull')/`n'))
 		local rsquared = `nagrsquared'*`max_r2a'
 		local rsquared : di %4.3f `rsquared'
 	}
@@ -679,7 +681,7 @@ local events = ceil(`rate'*`tot_per_yrs')
 	local EPP_1 = round(`epp1',.01)
 	
 	// criteria 2 - small absolute difference in r-sq adj
-	local lnLnull = (`events'*(ln(`events'/`n')))-`events'
+	local lnLnull = (`events'*(ln(`events'/`tot_per_yrs')))-`events'
 	local max_r2a = (1- exp((2*`lnLnull')/`n'))
 	local DImax_r2a : di %4.3f `max_r2a'
 	local nag_r2 = `r2a'/`max_r2a'
@@ -1076,3 +1078,4 @@ else {
 end
 
 ******* end of criteria_print program
+
